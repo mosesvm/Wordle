@@ -25,6 +25,12 @@
     --divider: #3a3a3c;
   }
 
+  /* Color-blind mode: orange = correct, blue = present */
+  html.colorblind {
+    --correct: #f5793a;
+    --present: #85c0f9;
+  }
+
   body {
     background: var(--bg);
     color: var(--text);
@@ -43,7 +49,8 @@
     align-items: center;
     justify-content: center;
     border-bottom: 1px solid var(--header-border);
-    padding: 12px 0;
+    padding: 12px 16px;
+    position: relative;
   }
 
   header h1 {
@@ -52,6 +59,39 @@
     letter-spacing: 0.15rem;
     text-transform: uppercase;
   }
+
+  #cb-toggle {
+    position: absolute;
+    right: 16px;
+    background: none;
+    border: 1px solid #565758;
+    border-radius: 6px;
+    color: #818384;
+    cursor: pointer;
+    padding: 5px 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06rem;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+
+  #cb-toggle:hover { border-color: #818384; color: #fff; }
+
+  #cb-toggle.active {
+    border-color: var(--correct);
+    color: var(--correct);
+    background: rgba(245,121,58,0.08);
+  }
+
+  html.colorblind #cb-toggle.active {
+    background: rgba(133,192,249,0.08);
+  }
+
+  #cb-toggle svg { flex-shrink: 0; }
 
   /* ── Toasts ─────────────────────────────────────────────────────────── */
   #toast-container {
@@ -383,7 +423,16 @@
 </head>
 <body>
 
-<header><h1>Wordle</h1></header>
+<header>
+  <h1>Wordle</h1>
+  <button id="cb-toggle" title="Toggle color-blind mode">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+    CB
+  </button>
+</header>
 
 <div id="toast-container"></div>
 
@@ -753,6 +802,24 @@ function showToast(msg, duration = 1800) {
   container.appendChild(toast);
   setTimeout(() => toast.remove(), duration);
 }
+
+// ─── Color-blind mode ─────────────────────────────────────────────────────────
+const CB_KEY = "wordle_colorblind";
+
+function applyColorblind(on) {
+  document.documentElement.classList.toggle("colorblind", on);
+  document.getElementById("cb-toggle").classList.toggle("active", on);
+}
+
+(function initColorblind() {
+  const saved = localStorage.getItem(CB_KEY) === "1";
+  applyColorblind(saved);
+  document.getElementById("cb-toggle").addEventListener("click", () => {
+    const next = !document.documentElement.classList.contains("colorblind");
+    applyColorblind(next);
+    try { localStorage.setItem(CB_KEY, next ? "1" : "0"); } catch (_) {}
+  });
+})();
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 initGame();
