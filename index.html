@@ -504,38 +504,128 @@
 </div>
 
 <script>
-// ─── Word list ────────────────────────────────────────────────────────────────
+// ─── Answer pool (~200 common words) ─────────────────────────────────────────
 const WORDS = [
   "about","above","abuse","actor","acute","admit","adopt","adult","after","again",
   "agree","ahead","alarm","album","alert","alike","align","alley","allow","alone",
-  "along","alter","angel","anger","angle","angry","anime","annex","apart","apple",
-  "apply","arena","argue","arise","armor","array","arrow","aside","asked","atlas",
-  "avoid","awake","award","awful","badge","basic","basis","batch","beach","began",
-  "begin","being","below","bench","birds","black","blade","blame","bland","blank",
-  "blast","blaze","bleed","bless","blind","block","blood","blown","blues","blunt",
-  "board","bonus","boost","bound","brain","brand","brave","bread","break","breed",
-  "brick","bride","brief","bring","broke","brook","brown","brute","build","built",
-  "burst","buyer","cabin","camel","candy","carry","catch","cause","chain","chair",
-  "chaos","charm","chase","cheap","check","cheek","chess","chest","chief","child",
-  "china","choir","chunk","civic","civil","claim","class","clean","clear","clerk",
-  "click","cliff","climb","cling","clock","clone","close","cloth","cloud","coach",
-  "coast","color","comic","comma","coral","count","court","cover","craft","crane",
-  "crash","crazy","cream","creek","crime","crisp","cross","crowd","crown","cruel",
-  "crush","curve","cycle","daily","dance","datum","dealt","death","debut","delay",
-  "depth","derby","devil","dirty","disco","doing","doubt","dough","draft","drain",
-  "drama","drank","drawn","dream","dress","dried","drift","drink","drive","drove",
-  "drown","dying","eager","early","earth","eight","elect","elite","empty","enemy"
+  "along","alter","angel","anger","angle","angry","annex","apart","apple","apply",
+  "arena","argue","arise","armor","array","arrow","aside","atlas","avoid","awake",
+  "award","awful","badge","basic","basis","batch","beach","began","begin","being",
+  "below","bench","black","blade","blame","blank","blast","blaze","bleed","bless",
+  "blind","block","blood","blown","blues","blunt","board","bonus","boost","bound",
+  "brain","brand","brave","bread","break","breed","brick","bride","brief","bring",
+  "broke","brook","brown","brute","build","built","burst","buyer","cabin","camel",
+  "candy","carry","catch","cause","chain","chair","chaos","charm","chase","cheap",
+  "check","cheek","chess","chest","chief","child","china","choir","chunk","civic",
+  "civil","claim","class","clean","clear","clerk","click","cliff","climb","cling",
+  "clock","clone","close","cloth","cloud","coach","coast","color","comic","comma",
+  "coral","count","court","cover","craft","crane","crash","crazy","cream","creek",
+  "crime","crisp","cross","crowd","crown","cruel","crush","curve","cycle","daily",
+  "dance","dealt","death","debut","delay","depth","derby","devil","dirty","disco",
+  "doubt","dough","draft","drain","drama","drank","drawn","dream","dress","dried",
+  "drift","drink","drive","drove","drown","dying","eager","early","earth","eight",
+  "elect","elite","empty","enemy","enjoy","entry","equal","error","every","exact",
+  "faith","falls","false","fancy","fatal","feast","fence","fever","field","fifth",
+  "fifty","fight","filed","final","first","fixed","flame","flash","fleet","flesh",
+  "float","flock","floor","fluid","focus","force","forge","forth","found","frame",
+  "frank","freed","fresh","front","frost","froze","fully","funds","funny","ghost",
+  "given","glass","globe","glory","glove","going","grace","grade","grand","grant",
+  "grasp","grave","great","green","greet","grief","grind","groan","group","grown",
+  "guard","guide","guilt","habit","happy","harsh","heart","heavy","hence","hills",
+  "hippo","honor","horse","hotel","house","human","humor","hurry","ideal","image",
+  "imply","index","indie","inner","input","inter","intro","issue","items","ivory"
 ];
 
+// ─── Extra valid guesses (~370 words — total valid ≈ 570) ────────────────────
 const VALID_EXTRA = [
+  // A
   "aback","abase","abash","abate","abbey","abbot","abhor","abide","abler","abode",
-  "afoot","afoul","agape","agate","agave","agaze","agile","aging","aglow","agony",
-  "agora","atone","audio","audit","augur","avail","avert","avian","avid","azure",
-  "babel","balmy","banal","baste","bathe","batty","bayou","bedew","belly","berry",
-  "beset","bevel","bezel","biome","birch","bitty","blare","bliss","bloke","bloom",
-  "bloop","blurb","blurs","blurt","bogus","bolts","booze","boxer","braid","brash",
-  "brawn","brawl","briar","brine","brink","broil","brood","broom","broth","brush",
-  "buddy","buffs","bulge","bully","bumpy","bunch","bunny","burly"
+  "acorn","afoot","agape","agate","agave","agile","aging","aglow","agony","agora",
+  "aloft","aloof","aloud","amend","amiss","ample","amuse","antic","anvil","apron",
+  "ardor","aroma","atoll","atone","audio","audit","augur","avail","avert","azure",
+  // B
+  "balmy","banal","baste","bathe","batty","bayou","bedew","belly","berry","beset",
+  "bezel","biome","birch","bitty","blare","bliss","bloke","bloom","blurb","bogus",
+  "boxer","braid","brash","brawn","briar","brine","brink","broil","brood","broom",
+  "broth","brush","buddy","bulge","bully","bumpy","bunch","bunny","burly",
+  // C
+  "cadet","cameo","cargo","carve","cedar","champ","chant","chard","chart","chasm",
+  "chewy","chill","chimp","chore","churn","cider","cigar","cinch","clamp","clank",
+  "clasp","clink","cloak","cobra","comet","comfy","conch","corny","couch","covet",
+  "cramp","creak","credo","creep","crest","crimp","croak","crone","crook","crude",
+  "crumb","curly","curry",
+  // D
+  "daddy","daisy","datum","delta","demon","dense","depot","digit","diner","dizzy",
+  "dodge","dogma","dowel","drape","drawl","dread","dregs","drill","drone","drool",
+  "droop","drums","dusty","dwarf","dwell",
+  // E
+  "eaten","edict","egret","elder","elfin","elbow","evade","evict","evoke","exert",
+  "exile","exist","exult",
+  // F
+  "fable","facet","fairy","farce","fatty","feral","ferry","fetid","fiend","fiery",
+  "filch","filth","finch","fishy","fjord","flank","flare","flask","fling","flint",
+  "flood","flour","fluke","flute","foamy","foggy","folio","folly","foray","frail",
+  "freak","friar","frond","froth","fungi","furry","fuzzy",
+  // G
+  "gauge","gauze","giddy","girth","glare","gleam","glint","gloss","gnome","gorge",
+  "gouge","graft","grape","grate","graze","greed","grill","grimy","grout","growl",
+  "guile","guise","gully","gusto",
+  // H
+  "haiku","halve","handy","haste","haven","hazel","heady","hedge","heist","heron",
+  "hoard","hobby","holly","homer","hovel","humid","hunch","husky",
+  // I
+  "icing","idiom","idyll","igloo","inept","inert","ingot","inlay","irony","itchy",
+  // J
+  "jaunt","jazzy","jelly","joust","jumpy","juror",
+  // K
+  "kiosk","kitty","knack","knave","kneel","knelt","knife",
+  // L
+  "laden","lathe","layer","leaky","leech","legal","lemon","level","liner","lingo",
+  "lofty","logic","lousy","lucid","lumpy","lyric",
+  // M
+  "magic","mango","manor","maple","marsh","maxim","melee","melon","mercy","meter",
+  "mirth","miser","mocha","moldy","morph","mossy","motif","muddy","mulch","murky",
+  "mushy","muted",
+  // N
+  "nifty","nitty","noble","notch","novel",
+  // O
+  "oaken","obese","octet","often","onset","optic","orbit","organ",
+  // P
+  "paddy","panic","pasta","pasty","pause","perch","petty","piano","pixel","pixie",
+  "plaid","plain","plane","pleat","plier","pluck","plumb","plume","plunk","plush",
+  "polka","poppy","prank","prawn","preen","prism","privy","probe","prong","prose",
+  "prude","prune","psalm","pudgy","pulse","punch","pygmy",
+  // Q
+  "qualm","quart","quash","quell","query","quirk","quota",
+  // R
+  "rainy","rally","raven","reach","realm","rebel","reign","relax","relic","remix",
+  "repay","rider","ridge","risky","rival","rivet","rocky","rouge","rough","rouse",
+  "rowdy","royal","rugby","rupee","rusty",
+  // S
+  "sadly","saint","salsa","savvy","scald","scalp","scant","scarf","scone","scoop",
+  "scorn","scout","scrap","shade","shaft","shame","shank","shave","shear","sheen",
+  "shelf","shift","shiny","shock","shone","shrub","shrug","siege","sieve","silky",
+  "siren","skimp","skirt","skull","slang","slant","slick","slime","slope","sloth",
+  "slump","solar","solid","south","spade","spare","spark","spawn","spell","spill",
+  "spine","spoke","spoof","spore","sport","spray","spree","squad","squat","squid",
+  "stain","stale","stamp","stark","stash","steal","steam","steel","stern","stomp",
+  "stone","stool","storm","stout","stove","strap","straw","stray","strip","stuck",
+  "stunt","suave","sulky","swamp","swear","sweat","swept","swipe","swirl","sword",
+  // T
+  "tabby","talon","tangy","taunt","tawny","terse","thick","thief","thorn","threw",
+  "tiara","token","topaz","torch","toxic","trace","track","trade","trail","trait",
+  "tramp","trash","trawl","tread","trend","trick","tribe","troll","trout","trove",
+  "truce","truly","trunk","tuber","tulip","tuner","twang","tweak","twirl",
+  // U
+  "ulcer","ultra","umbra","uncut","unfit","union","unite","unlit","until","upper",
+  "upset","urban","usher","utter",
+  // V
+  "vague","vapid","vault","vegan","verge","verse","vigor","viola","viper",
+  // W
+  "waltz","waste","weigh","weird","whale","whack","whiff","whirl","whisk","wield",
+  "witch","witty","wonky","wordy","worth","wrath","wrist","wrong",
+  // Y–Z
+  "yeast","yearn","yield","young","zesty","zippy"
 ];
 
 const ALL_VALID = new Set([...WORDS, ...VALID_EXTRA]);
