@@ -402,20 +402,47 @@
 
   .dist-bar.highlight { background: var(--correct); }
 
-  /* Play Again button */
-  #play-again-btn {
-    padding: 14px 32px;
-    background: var(--correct);
-    color: #fff;
-    border: none;
+  /* Modal action buttons */
+  #modal-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  #share-btn, #play-again-btn {
+    flex: 1;
+    padding: 14px 0;
     border-radius: 4px;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06rem;
     cursor: pointer;
-    width: 100%;
-    margin-top: 4px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  #share-btn {
+    background: transparent;
+    border: 2px solid #565758;
+    color: #fff;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  #share-btn:hover { border-color: #818384; background: rgba(255,255,255,0.05); }
+
+  #share-btn.copied {
+    border-color: var(--correct);
+    color: var(--correct);
+  }
+
+  #play-again-btn {
+    background: var(--correct);
+    color: #fff;
   }
 
   #play-again-btn:hover { filter: brightness(1.15); }
@@ -462,7 +489,17 @@
     <div id="modal-dist">
       <h3>Guess Distribution</h3>
     </div>
-    <button id="play-again-btn">Play Again</button>
+    <div id="modal-actions">
+      <button id="share-btn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/>
+          <line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+        <span>Share</span>
+      </button>
+      <button id="play-again-btn">Play Again</button>
+    </div>
   </div>
 </div>
 
@@ -534,11 +571,12 @@ function recordResult(won, guessCount) {
 }
 
 // ─── Game state ───────────────────────────────────────────────────────────────
-let target, guesses, currentRow, currentCol, gameOver;
+let target, guesses, results, currentRow, currentCol, gameOver;
 
 function initGame() {
   target = WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
   guesses = Array.from({ length: 6 }, () => Array(5).fill(""));
+  results = [];
   currentRow = 0;
   currentCol = 0;
   gameOver = false;
@@ -665,6 +703,7 @@ function submitGuess() {
   }
 
   const result = evaluate(word, target);
+  results.push(result);
   const row    = currentRow; // capture before async
 
   // Staggered flip: 100ms between tiles, each flip takes 500ms
@@ -724,6 +763,12 @@ function openModal(won, guessCount, stats) {
   document.getElementById("stat-maxstreak").textContent = stats.maxStreak;
 
   renderDistribution(stats.distribution, won ? guessCount - 1 : -1);
+
+  // Re-wire share button with current game's won/guessCount
+  const shareBtn = document.getElementById("share-btn");
+  const newShareBtn = shareBtn.cloneNode(true); // remove old listeners
+  shareBtn.parentNode.replaceChild(newShareBtn, shareBtn);
+  newShareBtn.addEventListener("click", () => shareResults(won, guessCount));
 
   document.getElementById("modal-overlay").classList.add("visible");
 }
@@ -801,6 +846,50 @@ function showToast(msg, duration = 1800) {
   toast.style.animationDuration = duration + "ms";
   container.appendChild(toast);
   setTimeout(() => toast.remove(), duration);
+}
+
+// ─── Share ────────────────────────────────────────────────────────────────────
+function buildShareText(won, guessCount) {
+  const cb = document.documentElement.classList.contains("colorblind");
+  const SQ = {
+    correct: cb ? "\uD83D\uDFE7" : "\uD83D\uDFE9",  // 🟧 or 🟩
+    present: cb ? "\uD83D\uDFE6" : "\uD83D\uDFE8",  // 🟦 or 🟨
+    absent:  "\u2B1B"                                // ⬛
+  };
+  const header = `Wordle ${won ? guessCount : "X"}/6`;
+  const grid   = results.map(row => row.map(s => SQ[s]).join("")).join("\n");
+  return `${header}\n\n${grid}`;
+}
+
+function shareResults(won, guessCount) {
+  const text = buildShareText(won, guessCount);
+  const btn  = document.getElementById("share-btn");
+
+  const markCopied = () => {
+    btn.classList.add("copied");
+    btn.querySelector("span").textContent = "Copied!";
+    showToast("Copied to clipboard!");
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      btn.querySelector("span").textContent = "Share";
+    }, 2000);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(markCopied).catch(() => fallbackCopy(text, markCopied));
+  } else {
+    fallbackCopy(text, markCopied);
+  }
+}
+
+function fallbackCopy(text, cb) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.cssText = "position:fixed;opacity:0;pointer-events:none";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); cb(); } catch (_) { showToast("Copy failed"); }
+  document.body.removeChild(ta);
 }
 
 // ─── Color-blind mode ─────────────────────────────────────────────────────────
