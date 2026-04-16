@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordle</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #121213;
+    --tile-border: #3a3a3c;
+    --tile-empty: #121213;
+    --correct: #538d4e;
+    --present: #b59f3b;
+    --absent: #3a3a3c;
+    --key-bg: #818384;
+    --key-text: #fff;
+    --text: #fff;
+    --header-border: #3a3a3c;
+    --toast-bg: #fff;
+    --toast-text: #000;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    user-select: none;
+  }
+
+  header {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--header-border);
+    padding: 12px 0;
+    position: relative;
+  }
+
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.15rem;
+    text-transform: uppercase;
+  }
+
+  #toast-container {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: var(--toast-bg);
+    color: var(--toast-text);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    animation: fadeInOut 1.8s ease forwards;
+  }
+
+  @keyframes fadeInOut {
+    0%   { opacity: 0; transform: translateY(-6px); }
+    15%  { opacity: 1; transform: translateY(0); }
+    70%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  #board-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    padding: 20px 0 10px;
+  }
+
+  #board {
+    display: grid;
+    grid-template-rows: repeat(6, 1fr);
+    gap: 5px;
+    width: 350px;
+    height: 420px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+  }
+
+  .tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 2px solid var(--tile-border);
+    background: var(--tile-empty);
+    color: var(--text);
+    transition: border-color 0.05s;
+    position: relative;
+  }
+
+  .tile[data-letter] {
+    border-color: #565758;
+    animation: pop 0.1s ease;
+  }
+
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  .tile.reveal {
+    animation: flip 0.5s ease forwards;
+  }
+
+  @keyframes flip {
+    0%   { transform: rotateX(0deg); }
+    50%  { transform: rotateX(-90deg); background: var(--tile-empty); border-color: var(--tile-border); }
+    100% { transform: rotateX(0deg); }
+  }
+
+  .tile.correct  { background: var(--correct);  border-color: var(--correct);  color: #fff; }
+  .tile.present  { background: var(--present);  border-color: var(--present);  color: #fff; }
+  .tile.absent   { background: var(--absent);   border-color: var(--absent);   color: #fff; }
+
+  .tile.shake {
+    animation: shake 0.5s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-4px); }
+    40%      { transform: translateX(4px); }
+    60%      { transform: translateX(-4px); }
+    80%      { transform: translateX(4px); }
+  }
+
+  .tile.bounce {
+    animation: bounce 0.1s ease forwards;
+  }
+
+  @keyframes bounce {
+    0%   { transform: translateY(0); }
+    50%  { transform: translateY(-20px); }
+    100% { transform: translateY(0); }
+  }
+
+  #keyboard {
+    width: 100%;
+    max-width: 500px;
+    padding: 0 8px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .kb-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .key {
+    height: 58px;
+    min-width: 43px;
+    border-radius: 4px;
+    border: none;
+    background: var(--key-bg);
+    color: var(--key-text);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    max-width: 43px;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .key.wide { min-width: 65px; max-width: 65px; font-size: 0.75rem; }
+
+  .key.correct { background: var(--correct); }
+  .key.present { background: var(--present); }
+  .key.absent  { background: var(--absent);  }
+
+  #new-game-btn {
+    display: none;
+    margin: 12px auto 0;
+    padding: 12px 24px;
+    background: var(--correct);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+    cursor: pointer;
+  }
+
+  #new-game-btn:hover { filter: brightness(1.15); }
+</style>
+</head>
+<body>
+
+<header><h1>Wordle</h1></header>
+
+<div id="toast-container"></div>
+
+<div id="board-container">
+  <div id="board"></div>
+</div>
+
+<div id="keyboard">
+  <div class="kb-row" id="kb-row-1"></div>
+  <div class="kb-row" id="kb-row-2"></div>
+  <div class="kb-row" id="kb-row-3"></div>
+</div>
+
+<button id="new-game-btn">New Game</button>
+
+<script>
+// ─── Word list (200 common 5-letter words) ───────────────────────────────────
+const WORDS = [
+  "about","above","abuse","actor","acute","admit","adopt","adult","after","again",
+  "agree","ahead","alarm","album","alert","alike","align","alley","allow","alone",
+  "along","alter","angel","anger","angle","angry","anime","annex","apart","apple",
+  "apply","arena","argue","arise","armor","array","arrow","aside","asked","atlas",
+  "avoid","awake","award","awful","badge","basic","basis","batch","beach","began",
+  "begin","being","below","bench","birds","black","blade","blame","bland","blank",
+  "blast","blaze","bleed","bless","blind","block","blood","blown","blues","blunt",
+  "board","bonus","boost","bound","brain","brand","brave","bread","break","breed",
+  "brick","bride","brief","bring","broke","brook","brown","brute","build","built",
+  "burst","buyer","cabin","camel","candy","carry","catch","cause","chain","chair",
+  "chaos","charm","chase","cheap","check","cheek","chess","chest","chief","child",
+  "china","choir","chunk","civic","civil","claim","class","clean","clear","clerk",
+  "click","cliff","climb","cling","clock","clone","close","cloth","cloud","coach",
+  "coast","color","comic","comma","coral","count","court","cover","craft","crane",
+  "crash","crazy","cream","creek","crime","crisp","cross","crowd","crown","cruel",
+  "crush","curve","cycle","daily","dance","datum","dealt","death","debut","delay",
+  "depth","derby","devil","dirty","disco","doing","doubt","dough","draft","drain",
+  "drama","drank","drawn","dream","dress","dried","drift","drink","drive","drove",
+  "drown","dying","eager","early","earth","eight","elect","elite","empty","enemy"
+];
+
+const VALID_EXTRA = [
+  "aback","abase","abash","abate","abbey","abbot","abhor","abide","abler","abode",
+  "afoot","afoul","agape","agate","agave","agaze","agile","aging","aglow","agony",
+  "agora","atone","audio","audit","augur","avail","avert","avian","avid","azure",
+  "babel","balmy","banal","baste","bathe","batty","bayou","bedew","belly","berry",
+  "beset","bevel","bezel","biome","birch","bitty","bland","blare","bliss","bloke",
+  "bloom","blown","bloop","blurb","blurs","blurt","bogus","bolts","booze","boxer",
+  "braid","brash","brawn","brawl","briar","brine","brink","broil","brood","broom",
+  "broth","brush","buddy","buffs","bulge","bully","bumpy","bunch","bunny","burly"
+];
+
+const ALL_VALID = new Set([...WORDS, ...VALID_EXTRA]);
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let target, guesses, currentRow, currentCol, gameOver;
+
+function initGame() {
+  target = WORDS[Math.floor(Math.random() * WORDS.length)].toUpperCase();
+  guesses = Array.from({ length: 6 }, () => Array(5).fill(""));
+  currentRow = 0;
+  currentCol = 0;
+  gameOver = false;
+  renderBoard();
+  renderKeyboard();
+  document.getElementById("new-game-btn").style.display = "none";
+}
+
+// ─── Board ────────────────────────────────────────────────────────────────────
+function renderBoard() {
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  for (let r = 0; r < 6; r++) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.id = `row-${r}`;
+    for (let c = 0; c < 5; c++) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.id = `tile-${r}-${c}`;
+      row.appendChild(tile);
+    }
+    board.appendChild(row);
+  }
+}
+
+function getTile(r, c) {
+  return document.getElementById(`tile-${r}-${c}`);
+}
+
+function setTileLetter(r, c, letter) {
+  const tile = getTile(r, c);
+  tile.textContent = letter;
+  if (letter) tile.dataset.letter = letter;
+  else delete tile.dataset.letter;
+}
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+const KB_ROWS = [
+  ["Q","W","E","R","T","Y","U","I","O","P"],
+  ["A","S","D","F","G","H","J","K","L"],
+  ["ENTER","Z","X","C","V","B","N","M","⌫"]
+];
+
+function renderKeyboard() {
+  KB_ROWS.forEach((keys, i) => {
+    const row = document.getElementById(`kb-row-${i + 1}`);
+    row.innerHTML = "";
+    keys.forEach(k => {
+      const btn = document.createElement("button");
+      btn.className = "key" + (k === "ENTER" || k === "⌫" ? " wide" : "");
+      btn.textContent = k;
+      btn.dataset.key = k;
+      btn.addEventListener("click", () => handleKey(k));
+      row.appendChild(btn);
+    });
+  });
+}
+
+function updateKeyColor(letter, state) {
+  const priority = { correct: 3, present: 2, absent: 1 };
+  document.querySelectorAll(`.key[data-key="${letter}"]`).forEach(btn => {
+    const current = btn.classList.contains("correct") ? "correct"
+                  : btn.classList.contains("present") ? "present"
+                  : btn.classList.contains("absent")  ? "absent"
+                  : null;
+    if (!current || priority[state] > priority[current]) {
+      btn.classList.remove("correct", "present", "absent");
+      btn.classList.add(state);
+    }
+  });
+}
+
+// ─── Input handling ───────────────────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  if (e.key === "Enter") handleKey("ENTER");
+  else if (e.key === "Backspace") handleKey("⌫");
+  else if (/^[a-zA-Z]$/.test(e.key)) handleKey(e.key.toUpperCase());
+});
+
+function handleKey(key) {
+  if (gameOver) return;
+
+  if (key === "⌫") {
+    if (currentCol > 0) {
+      currentCol--;
+      guesses[currentRow][currentCol] = "";
+      setTileLetter(currentRow, currentCol, "");
+    }
+    return;
+  }
+
+  if (key === "ENTER") {
+    submitGuess();
+    return;
+  }
+
+  if (currentCol < 5 && /^[A-Z]$/.test(key)) {
+    guesses[currentRow][currentCol] = key;
+    setTileLetter(currentRow, currentCol, key);
+    currentCol++;
+  }
+}
+
+// ─── Guess evaluation ─────────────────────────────────────────────────────────
+function evaluate(guess, answer) {
+  const result = Array(5).fill("absent");
+  const answerArr = answer.split("");
+  const guessArr  = guess.split("");
+  const used = Array(5).fill(false);
+
+  // Pass 1: correct
+  for (let i = 0; i < 5; i++) {
+    if (guessArr[i] === answerArr[i]) {
+      result[i] = "correct";
+      used[i] = true;
+    }
+  }
+
+  // Pass 2: present
+  for (let i = 0; i < 5; i++) {
+    if (result[i] === "correct") continue;
+    for (let j = 0; j < 5; j++) {
+      if (!used[j] && guessArr[i] === answerArr[j]) {
+        result[i] = "present";
+        used[j] = true;
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+function submitGuess() {
+  if (currentCol < 5) {
+    shakeRow(currentRow);
+    showToast("Not enough letters");
+    return;
+  }
+
+  const word = guesses[currentRow].join("");
+
+  if (!ALL_VALID.has(word.toLowerCase()) && !WORDS.includes(word.toLowerCase())) {
+    shakeRow(currentRow);
+    showToast("Not in word list");
+    return;
+  }
+
+  const result = evaluate(word, target);
+
+  // Animate tiles with staggered flip, then apply colors
+  for (let c = 0; c < 5; c++) {
+    const tile = getTile(currentRow, c);
+    const delay = c * 300;
+    setTimeout(() => {
+      tile.classList.add("reveal");
+      // At the midpoint of the flip (half of 500ms = 250ms after this delay)
+      setTimeout(() => {
+        tile.classList.add(result[c]);
+      }, 250);
+      setTimeout(() => {
+        tile.classList.remove("reveal");
+        updateKeyColor(guesses[currentRow][c], result[c]);
+      }, 500);
+    }, delay);
+  }
+
+  const totalReveal = 5 * 300 + 200;
+
+  setTimeout(() => {
+    if (result.every(r => r === "correct")) {
+      gameOver = true;
+      const msgs = ["Genius!","Magnificent!","Impressive!","Splendid!","Great!","Phew!"];
+      showToast(msgs[currentRow] || "Nice!");
+      bounceRow(currentRow);
+      showNewGame();
+    } else if (currentRow === 5) {
+      gameOver = true;
+      showToast(target, 3500);
+      showNewGame();
+    } else {
+      currentRow++;
+      currentCol = 0;
+    }
+  }, totalReveal);
+}
+
+// ─── Animations & UI helpers ──────────────────────────────────────────────────
+function shakeRow(r) {
+  const row = document.getElementById(`row-${r}`);
+  row.querySelectorAll(".tile").forEach(t => {
+    t.classList.remove("shake");
+    void t.offsetWidth; // reflow
+    t.classList.add("shake");
+  });
+}
+
+function bounceRow(r) {
+  document.getElementById(`row-${r}`).querySelectorAll(".tile").forEach((t, i) => {
+    setTimeout(() => {
+      t.classList.add("bounce");
+      setTimeout(() => t.classList.remove("bounce"), 600);
+    }, i * 100);
+  });
+}
+
+function showToast(msg, duration = 1800) {
+  const container = document.getElementById("toast-container");
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = msg;
+  toast.style.animationDuration = duration + "ms";
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), duration);
+}
+
+function showNewGame() {
+  setTimeout(() => {
+    const btn = document.getElementById("new-game-btn");
+    btn.style.display = "block";
+  }, 1600);
+}
+
+document.getElementById("new-game-btn").addEventListener("click", initGame);
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+initGame();
+</script>
+</body>
+</html>
